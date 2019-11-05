@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering _ Di Mao'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -8,14 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+# install.packages("ClusterR")
+library(ClusterR)
+library(dplyr)
+library(tidyr)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
-
-K1 <- read.csv(...)
-
+K1 <- read.csv("Class_Motivation.csv")
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -25,14 +26,13 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
-
-K2 <- 
-
+K2 <- select(K1, -c("id"))
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+# If we recode values, we only can assign a desired value to those elements, which is with expectation maximization method, but it is the loss of data authenticity.
+# If we remove those people with missing value, it can reduce the representativeness of the samples, so we are building bias into your sample by so doing.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -46,11 +46,8 @@ K3 <- na.omit(K2) #This command create a data frame with only those people with 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
-K3 <- 
-
+K3 <- scale(K3)
 ```
-
 
 Now we will run the K-means clustering algorithm we talked about in class. 
 1) The algorithm starts by randomly choosing some starting values 
@@ -65,8 +62,7 @@ Notice that in this case we have 5 variables and in class we only had 2. It is i
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
-
-fit <- 
+fit1 <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -76,27 +72,28 @@ fit <-
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit1$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+K5 <- gather(K4, week, motivation, 1:5, factor_key=TRUE)
+K5
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
-
+K6 <- K5%>%group_by( week,cluster)%>%
+  summarise(mean=mean(motivation))%>%
+  arrange(week, cluster)
+K6
 ```
 
 Now it's time to do some visualization: 
@@ -112,11 +109,8 @@ We are going to create a line plot similar to the one created in the school drop
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
 ```{r}
-
-K6$week <- 
-
-K6$cluster <- 
-
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
 ```
 
 Now we can plot our line plot using the ggplot command, "ggplot()".
@@ -127,29 +121,161 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
-
+# install.packages("ggplot2")
+library(ggplot2)
+ggplot(K6, aes(week, mean, color = cluster)) + geom_line() +
+  xlab("Week") + ylab("Average Motivation")
 ```
 
 What patterns do you see in the plot?
 
-
+# Students with high motivation in the beginning became low , however, those who started with low motivation became high.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
-```{r}
-K7 <- 
-```
-
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
-##Part II
+```{r}
+K31 <- read.csv("Class_Motivation.csv")
+K32 <- select(K31, -c("id"))
+K33 <- na.omit(K32)
+K33 <- scale(K33)
+fit31 <- kmeans(K33, 3)
+K34 <- data.frame(K33, fit31$cluster)
+names(K34) <- c("1", "2", "3", "4", "5", "cluster") 
+K35 <- gather(K34, week, motivation, 1:5, factor_key=TRUE)
+K35
+```
 
+```{r}
+K36 <- K35%>%group_by( week,cluster)%>%
+  summarise(mean=mean(motivation))%>%
+  arrange(week, cluster)
+K36$week <- as.numeric(K36$week)
+K36$cluster <- as.factor(K36$cluster)
+ggplot(K36, aes(week, mean, color = cluster)) + geom_line() +
+  xlab("Week") + ylab("Average Motivation")
+```
+
+##Part II
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+Data1 <- read.csv("hudk4050-classes.csv", header = TRUE, na.strings = "")
+Data1
+```
+```{r}
+Data2 <- unite(Data1, "First.Name", "Last.Name", col = name, sep = "_")
+Data3 <- Data2 %>% gather(classnum, classcode, "Class.1", "Class.2", "Class.3", "Class.4", "Class.5", "Class.6") %>% select(-c(classnum))
+
+Data3$classcode = gsub(" ", "", Data3$classcode)
+Data3 <- Data3 %>% filter(classcode != "HUDK4050") %>% filter(name != "ZIMO_CHEN")
+Data3$Count = 1
+Data4 <- Data3 %>% spread(classcode,Count)
+row.names(Data4) = Data4$name
+Data4$name <- NULL
+Data4 = ifelse(is.na(Data4), 0, 1)
+Data5 = as.matrix(Data4)
+
+fit2 <- kmeans(Data5, 4)
+fit2$cluster
+
+Data6 <- data.frame(Data5, fit2$cluster)
+colnames(Data6)[colnames(Data6)=="fit2.cluster"] <- "cluster"
+Count <- dplyr::count(Data6, cluster)
+Count
+
+Data7 = Data5 %*% t(Data5)
+diag(Data7) <- NA
+library(igraph)
+g3 = graph.adjacency(Data7, mode = "undirected")
+plot(g3, layout=layout.fruchterman.reingold, vertex.color=Data6$cluster)
+```
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+# install.packages("vcd")
+library(vcd)
+
+D1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+D1[, 3] <- gsub("[[:alpha:]]", "", D1[, 3])
+D1[, 6] <- gsub("[[:alpha:]]", "", D1[, 6])
+D1[, 7] <- gsub("[[:alpha:]]", "", D1[, 7])
+D1[, 3] <- as.numeric(D1[, 3])
+D1[, 6] <- as.numeric(D1[, 6])
+D1[, 7] <- as.numeric(D1[, 7])
+D1[, 15] <- as.character(D1[, 15])
+D1[, 16] <- as.character(D1[, 16])
+rev <- grep("E", D1[, 15])
+a <- NULL
+b <- NULL
+for (i in rev) {
+  a = D1[i, 15]
+  b = D1[i, 16]
+  D1[i, 15] <- b
+  D1[i, 16] <- a
+  }
+for (j in c(15:16)){
+  for (i in 1:nrow(D1))
+  { if (grepl("\\D", D1[i,j]))
+  { psn <- as.numeric(regexpr("\\D", D1[i,j]))
+    D1[i,j] <- substr(D1[i,j], 1, psn-1)}}
+  }
+D1[, 15] <- as.numeric(D1[, 15])
+D1[, 16] <- as.numeric(D1[, 16])
+D1 <- na.omit(D1)
+D1[, 15] <- as.character(D1[, 15])
+D1[, 16] <- as.character(D1[, 16])
+
+D2 <- unite (D1, "First.Name", "Last.Name", col = name, sep = "_")
+row.names(D2) = D2$name
+D2$name <- NULL
+
+select_if(D2, is.numeric)
+
+names(select_if(D2, is.numeric))
+
+D3 <- select(D2, "How.many.months.have.you.lived.in.New.York.City.", "How.many.siblings..brothers.sisters..do.you.have.",  "How.many.times.do.you.play.sport.each.week.", "How.many.miles.do.you.travel.from.home.to.TC.", "Estimate.how.many.of.your.friends.own.Android.phones",  "How.many.movies.have.you.seen.in.the.cinema.this.year.", "How.many.pets.have.you.owned.in.your.life.",  "How.many.people.have.you.met.for.the.first.time.this.year.",   "How.many.time.do.you.cook.for.yourself.each.week.", "How.many.classes.are.you.taking.this.semester.")
+
+D3 <- scale(D3)
+
+fit3 <- kmeans(D3, 4) 
+fit3$cluster
+
+K3 <- data.frame(D3, fit3$cluster)
+names(K3) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster") 
+
+D4 <- data.frame(K3, D1[15])
+D5 <- data.frame(D4, D1[16])
+colnames(D5) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster", "la", "lo")
+
+D35 <- D5[row.names(D5) %in% row.names(Data6), ]
+D36 <- Data6[row.names(Data6) %in% row.names(D35), ]
+D35$name <- rownames(D35)
+D36$name <- rownames(D36)
+
+```
+```{r}
+Cluster_Region = D35$cluster
+Cluster_Classes = D36$cluster
+A1 <- structable(Cluster_Region ~ Cluster_Classes)
+mosaic(A1, shade = TRUE, legend = TRUE)
+```
+```{r}
+B1 <- cbind(D35$cluster, D36$cluster, D35$name)
+colnames(B1) = c("D35.cluster", "D36.cluster", "name")
+
+B1 <- as.data.frame(B1)
+ggplot(B1, aes(name, D35.cluster, color = as.factor(D35.cluster), 
+               shape = as.factor(D36.cluster))) +
+  geom_point(size = 3) +
+  xlab("Name") + 
+  ylab("Cluster") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
